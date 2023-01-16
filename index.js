@@ -1,59 +1,153 @@
+const fs = require("fs");
+
+const writeFile = (path, products) =>
+	fs.promises.writeFile(path, JSON.stringify({ products: products }));
+
+const readFile = async (path) => {
+	const asyncGetProducts = await fs.promises.readFile(path);
+	const parseResult = JSON.parse(asyncGetProducts);
+
+	return parseResult;
+};
+
 class ProductManager {
-    constructor(){
-        this.products = []
-    }
+	constructor(path) {
+		this.products = [];
+		this.path = path;
+	}
 
-    getProduct(){
-        return this.products
-    }
-    addProduct({title, desc, price, thumbnail, code, stock}){
-        
-        const findProduct = this.products.find((product) => product.title === title || product.code === code)
+	initialize = async () => {
+		const existsFile = fs.existsSync(this.path);
 
-        if(findProduct){
-            console.log('Error, producto ya ingresado');
-        }else{
-            const id = this.products.length +1 
-            this.products.push({id, title, desc, price, thumbnail, code, stock})
-    
-        }
-    }
+		if (existsFile) {
+			console.log("El archivo ya existía!");
+			const { products } = await readFile(this.path);
+			this.products = products;
+		} else {
+			await writeFile(this.path, this.products);
+			console.log("El archivo se creó exitosamente!");
+		}
+	};
 
-    getProductById(id){
-        const findProduct = this.products.find((product) => product.id === id)
+	getProducts = async () => {
+		const fileData = await readFile(this.path);
+		return fileData;
+	};
 
-        if(findProduct){
-            console.log('Producto encontrado \n' + JSON.stringify(findProduct));
-        }else{
-            console.log('No se encontro ningun producto con ese Id');
-        }
-    }
+	addProduct = async ({ title, desc, price, thumbnail, code, stock }) => {
+		// Aqui solo valido por el título o por el código, no hay problema que se repita cualquiera de los otros campos
+		const findedProduct = this.products.find(
+			(product) => product.title === title || product.code === code
+		);
+
+		if (findedProduct) {
+			console.log(
+				`Error ya existe un producto con ese titulo ${title} o código ${code} `
+			);
+		} else {
+			const id = this.products.length + 1;
+			this.products.push({
+				id,
+				title,
+				desc,
+				price,
+				thumbnail,
+				code,
+				stock,
+			});
+			await writeFile(this.path, this.products);
+			console.log("Producto creado exitosamente");
+		}
+	};
+
+	getProductById = (id) => {
+		const findedProduct = this.products.find(
+			(product) => product.id === id
+		);
+
+		if (findedProduct) {
+			return findedProduct;
+		} else {
+			console.log("No se encuentra un producto con ese id");
+			return null;
+		}
+	};
+
+	updateProduct = async (id, newProduct) => {
+		const findIndexProduct = this.products.findIndex(
+			(product) => product.id === id
+		);
+
+		if (findIndexProduct !== -1) {
+			const id = this.products[findIndexProduct].id;
+
+			this.products[findIndexProduct] = {
+				id,
+				...newProduct,
+			};
+			await writeFile(this.path, this.products);
+			console.log("Actualizado correctamente");
+		} else {
+			console.log("No se encuentra un producto con ese id");
+		}
+	};
+
+	deleteProduct = async (id) => {
+		const findIndexProduct = this.products.findIndex(
+			(product) => product.id === id
+		);
+
+		if (findIndexProduct !== -1) {
+			const newProducts = this.products.filter(
+				(product) => product.id !== id
+			);
+			await writeFile(this.path, newProducts);
+			console.log("Eliminado correctamente");
+		} else {
+			console.log("No se encuentra un producto con ese id");
+		}
+	};
 }
 
-const productManager = new ProductManager()
+async function main() {
+	const productManger = new ProductManager("./data.json");
+	await productManger.initialize();
 
-const newProduct1 = {
-    title : 'Fideos',
-    desc: 'Comestible',
-    price: 200,
-    thumbnail: "asd",
-    code: 'c1',
-    stock: 200
+	let products = await productManger.getProducts();
+	console.log(products);
+
+	const newProduct = {
+		title: "P1",
+		desc: "D1",
+		price: "P1",
+		thumbnail: "T1",
+		code: "C1",
+		stock: "S1",
+	};
+
+	await productManger.addProduct(newProduct);
+
+	products = await productManger.getProducts();
+	console.log(products);
+
+	const productToUpdate = {
+		title: "P0",
+		desc: "D0",
+		price: "P1",
+		thumbnail: "T1",
+		code: "C1",
+		stock: "S1",
+	};
+
+	await productManger.updateProduct(1, productToUpdate);
+
+	products = await productManger.getProducts();
+	console.log(products);
+
+	await productManger.deleteProduct(1);
+
+	products = await productManger.getProducts();
+	console.log(products);
 }
 
-const newProduct2 = {
-    title : 'Arroz',
-    desc: 'Comestible',
-    price: 140,
-    thumbnail: "asc",
-    code: 'c2',
-    stock: 200
-}
-
-
-productManager.addProduct(newProduct1)
-productManager.addProduct(newProduct2)
-
-
-console.log(productManager.getProductById(1));
-
+main();
