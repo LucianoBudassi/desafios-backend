@@ -1,4 +1,8 @@
-const fs = require("fs");
+const fs = require('fs')
+const { parse } = require("path");
+
+
+
 
 const writeFile = (path, products) =>
 	fs.promises.writeFile(path, JSON.stringify({ products: products }));
@@ -151,3 +155,6 @@ async function main() {
 }
 
 main();
+
+module.exports = ProductManager;
+
